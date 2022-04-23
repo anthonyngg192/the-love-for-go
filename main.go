@@ -2,12 +2,20 @@ package main
 
 import (
 	"fmt"
+	"net"
+	"net/http"
 	"sync"
 	"time"
 )
 
 func main() {
 	waitGroup()
+	findAddress("web.tryme.com")
+	hello()
+
+	http.HandleFunc("/hello", helloworld)
+	http.HandleFunc("/headers", headers)
+	http.ListenAndServe(":8090", nil)
 }
 
 func hello() {
@@ -47,16 +55,32 @@ func waitGroup() {
 		i := i
 		go func() {
 			defer wg.Done()
-			worker(i)
+			fmt.Printf("Worker %d starting\n", i)
+			time.Sleep(time.Second)
+			fmt.Printf("Worker %d done\n", i)
 		}()
 	}
-	wg.Add(1)
+	wg.Add(5)
 
 	wg.Wait()
 }
 
-func worker(i int) {
-	fmt.Printf("Worker %d starting\n", i)
-	time.Sleep(time.Second)
-	fmt.Printf("Worker %d done\n", i)
+func findAddress(url string) {
+	ips, _ := net.LookupIP(url)
+	for _, ip := range ips {
+		fmt.Println(ip)
+	}
+}
+
+func helloworld(w http.ResponseWriter, req *http.Request) {
+	fmt.Fprintf(w, "hello\n")
+	fmt.Println(req.Host)
+}
+
+func headers(w http.ResponseWriter, req *http.Request) {
+	for name, headers := range req.Header {
+		for _, h := range headers {
+			fmt.Fprintf(w, "%v: %v\n", name, h)
+		}
+	}
 }
